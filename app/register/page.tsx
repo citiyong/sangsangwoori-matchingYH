@@ -43,23 +43,32 @@ export default function RegisterPage() {
     setErrors({});
     setLoading(true);
 
-    const { error } = await supabase.from('seniors').insert({
-      name: name.trim(),
-      region,
-      desired_job: desiredJob,
-      career_years: careerYears ? parseInt(careerYears) : 0,
-    });
+    const { data: newSenior, error } = await supabase
+      .from('seniors')
+      .insert({
+        name: name.trim(),
+        region,
+        desired_job: desiredJob,
+        career_years: careerYears ? parseInt(careerYears) : 0,
+      })
+      .select('id')
+      .single();
+
+    if (error || !newSenior) {
+      setLoading(false);
+      setSubmitError('저장 중 오류가 발생했습니다. 다시 시도해 주세요.');
+      return;
+    }
+
+    // 등록 직후 해당 시니어 × 전체 일자리 매칭 점수 재계산
+    await supabase.rpc('recalculate_matches_for_senior', { p_senior_id: newSenior.id });
 
     setLoading(false);
-    if (error) {
-      setSubmitError('저장 중 오류가 발생했습니다. 다시 시도해 주세요.');
-    } else {
-      setSuccess(true);
-      setName('');
-      setRegion('');
-      setDesiredJob('');
-      setCareerYears('');
-    }
+    setSuccess(true);
+    setName('');
+    setRegion('');
+    setDesiredJob('');
+    setCareerYears('');
   }
 
   return (
