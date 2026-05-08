@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const REGIONS = ['서울', '경기', '인천', '기타'];
@@ -57,7 +58,6 @@ export default function AdminPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
 
-  // 일자리 추가 폼 상태
   const [title, setTitle] = useState('');
   const [region, setRegion] = useState('');
   const [jobType, setJobType] = useState('');
@@ -124,7 +124,6 @@ export default function AdminPage() {
       return;
     }
 
-    // 등록 직후 해당 일자리 × 전체 시니어 매칭 점수 재계산
     await supabase.rpc('recalculate_matches_for_job', { p_job_id: newJob.id });
 
     setAdding(false);
@@ -139,11 +138,10 @@ export default function AdminPage() {
     const { error } = await supabase.from('jobs').delete().eq('id', id);
     if (!error) {
       setJobs((prev) => prev.filter((j) => j.id !== id));
-      fetchDashboard(); // matches CASCADE 삭제 → 통계 갱신
+      fetchDashboard();
     }
   }
 
-  // 집계 계산
   const unmatchedCount = seniors.filter(
     (s) => calcStatus(matchMap[s.id] ?? []) === 'unmatched'
   ).length;
@@ -165,20 +163,26 @@ export default function AdminPage() {
           <p className="text-center text-xl text-gray-400 py-10 mb-12">집계 중...</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+            {/* 미매칭 */}
             <div className="bg-white rounded-2xl border-2 border-red-200 p-8 flex flex-col items-center shadow-sm">
+              <AlertTriangle className="w-10 h-10 text-red-500 mb-3" />
               <span className="text-5xl font-bold text-red-600 mb-2">{unmatchedCount}</span>
               <span className="text-xl font-semibold text-gray-700">미매칭</span>
-              <span className="text-base text-gray-400 mt-1">매칭 없거나 전부 0점</span>
+              <span className="text-lg text-gray-400 mt-1">매칭 없거나 전부 0점</span>
             </div>
+            {/* 매칭 대기 */}
             <div className="bg-white rounded-2xl border-2 border-yellow-200 p-8 flex flex-col items-center shadow-sm">
+              <Clock className="w-10 h-10 text-yellow-500 mb-3" />
               <span className="text-5xl font-bold text-yellow-600 mb-2">{pendingCount}</span>
               <span className="text-xl font-semibold text-gray-700">매칭 대기</span>
-              <span className="text-base text-gray-400 mt-1">확정 검토 중</span>
+              <span className="text-lg text-gray-400 mt-1">확정 검토 중</span>
             </div>
+            {/* 배정 완료 */}
             <div className="bg-white rounded-2xl border-2 border-green-200 p-8 flex flex-col items-center shadow-sm">
+              <CheckCircle2 className="w-10 h-10 text-green-500 mb-3" />
               <span className="text-5xl font-bold text-green-600 mb-2">{assignedCount}</span>
               <span className="text-xl font-semibold text-gray-700">배정 완료</span>
-              <span className="text-base text-gray-400 mt-1">assigned / done</span>
+              <span className="text-lg text-gray-400 mt-1">assigned / done</span>
             </div>
           </div>
         )}
@@ -239,7 +243,7 @@ export default function AdminPage() {
                         <td className="px-6 py-4 text-right">
                           <Link
                             href={`/recommendations?senior_id=${senior.id}`}
-                            className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-5 py-2 rounded-lg text-base transition-colors"
+                            className="inline-flex items-center justify-center bg-blue-700 hover:bg-blue-800 text-white font-semibold px-5 py-3 rounded-lg text-lg transition-colors min-h-[48px]"
                           >
                             상세 보기
                           </Link>
@@ -317,9 +321,9 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={adding}
-                  className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xl font-bold py-4 rounded-xl transition-colors"
+                  className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xl font-bold py-4 rounded-xl transition-colors min-h-[48px]"
                 >
-                  {adding ? '저장 중...' : '일자리 등록'}
+                  {adding ? '저장 중...' : '추가'}
                 </button>
               </div>
             </form>
@@ -363,9 +367,9 @@ export default function AdminPage() {
                         <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => handleDelete(job.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg text-base transition-colors"
+                            className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-3 rounded-lg text-lg transition-colors min-h-[48px]"
                           >
-                            삭제
+                            삭제 확인
                           </button>
                         </td>
                       </tr>

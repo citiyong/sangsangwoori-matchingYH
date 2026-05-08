@@ -60,7 +60,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // 등록 직후 해당 시니어 × 전체 일자리 매칭 점수 재계산
     await supabase.rpc('recalculate_matches_for_senior', { p_senior_id: newSenior.id });
 
     setLoading(false);
@@ -74,14 +73,14 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">시니어 프로필 등록</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">시니어 일자리 신청하기</h1>
         <p className="text-xl text-gray-500 mb-10">
           정보를 입력하시면 맞춤 일자리를 추천해 드립니다.
         </p>
 
         {success && (
           <div className="mb-6 bg-green-50 border-2 border-green-500 text-green-800 text-xl font-semibold rounded-xl px-6 py-4">
-            ✓ 등록이 완료되었습니다
+            ✓ 등록이 완료되었습니다. 담당자가 곧 연락드립니다
           </div>
         )}
 
@@ -98,6 +97,7 @@ export default function RegisterPage() {
         >
           {/* 이름 */}
           <div className="flex flex-col gap-2">
+            <p className="text-lg text-gray-500">성함을 알려 주세요.</p>
             <label className="text-xl font-semibold text-gray-800">
               이름 <span className="text-red-500">*</span>
             </label>
@@ -119,6 +119,7 @@ export default function RegisterPage() {
 
           {/* 지역 */}
           <div className="flex flex-col gap-2">
+            <p className="text-lg text-gray-500">어디에서 일하고 싶으세요?</p>
             <label className="text-xl font-semibold text-gray-800">
               지역 <span className="text-red-500">*</span>
             </label>
@@ -143,6 +144,7 @@ export default function RegisterPage() {
 
           {/* 희망 직종 */}
           <div className="flex flex-col gap-2">
+            <p className="text-lg text-gray-500">어떤 일을 하시겠어요?</p>
             <label className="text-xl font-semibold text-gray-800">
               희망 직종 <span className="text-red-500">*</span>
             </label>
@@ -167,6 +169,7 @@ export default function RegisterPage() {
 
           {/* 경력 연수 */}
           <div className="flex flex-col gap-2">
+            <p className="text-lg text-gray-500">일하신 경력이 몇 년인가요?</p>
             <label className="text-xl font-semibold text-gray-800">경력 연수 (년)</label>
             <input
               type="number"
@@ -181,7 +184,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-4 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-2xl font-bold py-5 rounded-xl transition-colors"
+            className="mt-4 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-2xl font-bold py-5 rounded-xl transition-colors min-h-[48px]"
           >
             {loading ? '저장 중...' : '등록하기'}
           </button>
