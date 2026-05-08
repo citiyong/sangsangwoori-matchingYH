@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle2, Phone, Mail } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const REGIONS = ['서울', '경기', '인천', '기타'];
@@ -14,6 +14,9 @@ type Senior = {
   region: string;
   desired_job: string;
   career_years: number;
+  status: string;
+  phone?: string | null;
+  email?: string | null;
 };
 
 type MatchStat = { senior_id: string; score: number; status: string };
@@ -28,9 +31,9 @@ type Job = {
 
 type SeniorStatus = 'unmatched' | 'pending' | 'assigned';
 
-function calcStatus(matches: MatchStat[]): SeniorStatus {
+function displayStatus(senior: Senior, matches: MatchStat[]): SeniorStatus {
+  if (senior.status === 'assigned') return 'assigned';
   if (!matches.length || matches.every((m) => m.score === 0)) return 'unmatched';
-  if (matches.some((m) => m.status === 'assigned' || m.status === 'done')) return 'assigned';
   return 'pending';
 }
 
@@ -54,6 +57,7 @@ export default function AdminPage() {
   const [seniors, setSeniors] = useState<Senior[]>([]);
   const [matchMap, setMatchMap] = useState<Record<string, MatchStat[]>>({});
   const [loadingDash, setLoadingDash] = useState(true);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -97,6 +101,16 @@ export default function AdminPage() {
     fetchDashboard();
     fetchJobs();
   }, [fetchDashboard, fetchJobs]);
+
+  async function handleStatusChange(senior: Senior, currentStatus: SeniorStatus) {
+    const nextStatus = currentStatus === 'assigned' ? 'pending' : 'assigned';
+    setStatusUpdating(senior.id);
+    await supabase.from('seniors').update({ status: nextStatus }).eq('id', senior.id);
+    setSeniors((prev) =>
+      prev.map((s) => (s.id === senior.id ? { ...s, status: nextStatus } : s))
+    );
+    setStatusUpdating(null);
+  }
 
   async function handleAddJob(e: React.FormEvent) {
     e.preventDefault();
@@ -143,18 +157,18 @@ export default function AdminPage() {
   }
 
   const unmatchedCount = seniors.filter(
-    (s) => calcStatus(matchMap[s.id] ?? []) === 'unmatched'
+    (s) => displayStatus(s, matchMap[s.id] ?? []) === 'unmatched'
   ).length;
   const pendingCount = seniors.filter(
-    (s) => calcStatus(matchMap[s.id] ?? []) === 'pending'
+    (s) => displayStatus(s, matchMap[s.id] ?? []) === 'pending'
   ).length;
   const assignedCount = seniors.filter(
-    (s) => calcStatus(matchMap[s.id] ?? []) === 'assigned'
+    (s) => displayStatus(s, matchMap[s.id] ?? []) === 'assigned'
   ).length;
 
   return (
     <main className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold text-gray-900 mb-2">담당자 대시보드</h1>
         <p className="text-xl text-gray-500 mb-8">매칭 현황과 일자리를 관리합니다.</p>
 
@@ -163,26 +177,23 @@ export default function AdminPage() {
           <p className="text-center text-xl text-gray-400 py-10 mb-12">집계 중...</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-            {/* 미매칭 */}
             <div className="bg-white rounded-2xl border-2 border-red-200 p-8 flex flex-col items-center shadow-sm">
               <AlertTriangle className="w-10 h-10 text-red-500 mb-3" />
               <span className="text-5xl font-bold text-red-600 mb-2">{unmatchedCount}</span>
               <span className="text-xl font-semibold text-gray-700">미매칭</span>
               <span className="text-lg text-gray-400 mt-1">매칭 없거나 전부 0점</span>
             </div>
-            {/* 매칭 대기 */}
             <div className="bg-white rounded-2xl border-2 border-yellow-200 p-8 flex flex-col items-center shadow-sm">
               <Clock className="w-10 h-10 text-yellow-500 mb-3" />
               <span className="text-5xl font-bold text-yellow-600 mb-2">{pendingCount}</span>
               <span className="text-xl font-semibold text-gray-700">매칭 대기</span>
               <span className="text-lg text-gray-400 mt-1">확정 검토 중</span>
             </div>
-            {/* 배정 완료 */}
             <div className="bg-white rounded-2xl border-2 border-green-200 p-8 flex flex-col items-center shadow-sm">
               <CheckCircle2 className="w-10 h-10 text-green-500 mb-3" />
               <span className="text-5xl font-bold text-green-600 mb-2">{assignedCount}</span>
               <span className="text-xl font-semibold text-gray-700">배정 완료</span>
-              <span className="text-lg text-gray-400 mt-1">assigned / done</span>
+              <span className="text-lg text-gray-400 mt-1">담당자 배정 확정</span>
             </div>
           </div>
         )}
@@ -208,14 +219,16 @@ export default function AdminPage() {
                     <th className="text-left px-6 py-4 font-semibold text-gray-600">희망 직종</th>
                     <th className="text-left px-6 py-4 font-semibold text-gray-600">최고 점수</th>
                     <th className="text-left px-6 py-4 font-semibold text-gray-600">상태</th>
+                    <th className="text-left px-6 py-4 font-semibold text-gray-600">연락처</th>
                     <th className="px-6 py-4" />
                   </tr>
                 </thead>
                 <tbody>
                   {seniors.map((senior) => {
                     const sm = matchMap[senior.id] ?? [];
-                    const status = calcStatus(sm);
+                    const status = displayStatus(senior, sm);
                     const best = bestScore(sm);
+                    const isUpdating = statusUpdating === senior.id;
                     return (
                       <tr
                         key={senior.id}
@@ -225,20 +238,53 @@ export default function AdminPage() {
                         <td className="px-6 py-4 text-gray-600">{senior.region}</td>
                         <td className="px-6 py-4 text-gray-600">{senior.desired_job}</td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`text-xl font-bold ${
-                              best >= 4 ? 'text-blue-700' : 'text-gray-400'
-                            }`}
-                          >
+                          <span className={`text-xl font-bold ${best >= 4 ? 'text-blue-700' : 'text-gray-400'}`}>
                             {best}점
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-base font-semibold ${STATUS_COLOR[status]}`}
-                          >
-                            {STATUS_LABEL[status]}
-                          </span>
+                          <div className="flex flex-col gap-2">
+                            <span className={`px-3 py-1 rounded-full text-base font-semibold w-fit ${STATUS_COLOR[status]}`}>
+                              {STATUS_LABEL[status]}
+                            </span>
+                            {status !== 'unmatched' && (
+                              <button
+                                onClick={() => handleStatusChange(senior, status)}
+                                disabled={isUpdating}
+                                className={`text-sm font-semibold px-3 py-1 rounded-lg transition-colors min-h-[36px] w-fit ${
+                                  status === 'assigned'
+                                    ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                                    : 'bg-green-600 hover:bg-green-700 text-white'
+                                } disabled:opacity-50`}
+                              >
+                                {isUpdating ? '처리 중...' : status === 'assigned' ? '배정 취소' : '배정 완료'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-2">
+                            {senior.phone ? (
+                              <a
+                                href={`tel:${senior.phone}`}
+                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                <Phone className="w-4 h-4" />
+                                {senior.phone}
+                              </a>
+                            ) : (
+                              <span className="text-gray-300 text-base">-</span>
+                            )}
+                            {senior.email && (
+                              <a
+                                href={`mailto:${senior.email}`}
+                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                <Mail className="w-4 h-4" />
+                                {senior.email}
+                              </a>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Link
@@ -261,7 +307,6 @@ export default function AdminPage() {
         <section>
           <h2 className="text-3xl font-bold text-gray-800 mb-6">일자리 관리</h2>
 
-          {/* 추가 폼 */}
           <div className="bg-white rounded-2xl border border-gray-200 p-8 mb-8 shadow-sm">
             <h3 className="text-2xl font-semibold text-gray-800 mb-5">새 일자리 등록</h3>
             {addError && (
@@ -329,7 +374,6 @@ export default function AdminPage() {
             </form>
           </div>
 
-          {/* 일자리 목록 */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-8 py-5 border-b border-gray-100">
               <h3 className="text-2xl font-semibold text-gray-800">
@@ -339,9 +383,7 @@ export default function AdminPage() {
             {loadingJobs ? (
               <p className="text-center text-xl text-gray-400 py-16">불러오는 중...</p>
             ) : jobs.length === 0 ? (
-              <p className="text-center text-xl text-gray-400 py-16">
-                등록된 일자리가 없습니다.
-              </p>
+              <p className="text-center text-xl text-gray-400 py-16">등록된 일자리가 없습니다.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-lg">

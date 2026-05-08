@@ -17,6 +17,8 @@ export default function RegisterPage() {
   const [region, setRegion] = useState('');
   const [desiredJob, setDesiredJob] = useState('');
   const [careerYears, setCareerYears] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,6 +52,8 @@ export default function RegisterPage() {
         region,
         desired_job: desiredJob,
         career_years: careerYears ? parseInt(careerYears) : 0,
+        phone: phone.trim() || null,
+        email: email.trim() || null,
       })
       .select('id')
       .single();
@@ -68,6 +72,8 @@ export default function RegisterPage() {
     setRegion('');
     setDesiredJob('');
     setCareerYears('');
+    setPhone('');
+    setEmail('');
   }
 
   return (
@@ -177,6 +183,35 @@ export default function RegisterPage() {
               onChange={(e) => setCareerYears(e.target.value)}
               placeholder="0"
               min={0}
+              className="border-2 border-gray-300 rounded-xl px-5 py-4 text-xl focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 구분선 */}
+          <div className="border-t border-gray-200 pt-2">
+            <p className="text-lg text-gray-400">연락처 (선택 — 담당자가 연락 드릴 때 사용합니다)</p>
+          </div>
+
+          {/* 전화번호 */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xl font-semibold text-gray-800">전화번호</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="010-0000-0000"
+              className="border-2 border-gray-300 rounded-xl px-5 py-4 text-xl focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 이메일 */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xl font-semibold text-gray-800">이메일</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@email.com"
               className="border-2 border-gray-300 rounded-xl px-5 py-4 text-xl focus:outline-none focus:border-blue-500"
             />
           </div>
